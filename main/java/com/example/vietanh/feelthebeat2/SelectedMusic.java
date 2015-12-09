@@ -13,22 +13,29 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.concurrent.TimeUnit;
 
 public class SelectedMusic extends AppCompatActivity {
-    TextView music_name;
-    TextView music_singer;
-    TextView tx1;
-    TextView tx2;
-    ImageView nextBtn;
-    ImageView previosBtn;
-    ImageView playBtn;
-    SeekBar seekBar;
+    private TextView music_name;
+    private TextView music_singer;
+    private TextView tx1;
+    private TextView tx2;
+    private ImageView nextBtn;
+    private ImageView previosBtn;
+    private ImageView playBtn;
+    private ImageView jump_backBtn;
+    private ImageView jump_nextBtn;
+    private ImageView favorite_main;
+    private SeekBar seekBar;
+    private MusicHelper helper;
+    private MusicListItem temp;
 
 
     private double startTime = 0;
     private double finalTime = 0;
+    private int jumpTime = 5000;
     private Handler myHandler = new Handler();
 
     int recentIndex;
@@ -46,10 +53,14 @@ public class SelectedMusic extends AppCompatActivity {
         playBtn = (ImageView)findViewById(R.id.playBtn);
         nextBtn = (ImageView)findViewById(R.id.next);
         previosBtn = (ImageView)findViewById(R.id.previos);
+        jump_backBtn = (ImageView)findViewById(R.id.jump_back);
+        jump_nextBtn = (ImageView)findViewById(R.id.jump_next);
 
         recentIndex = getIntent().getIntExtra("recentIndex", 0);
-        music_name.setText(MainActivity.musics.get(recentIndex).getmName());
-        music_singer.setText(MainActivity.musics.get(recentIndex).getmArtist());
+        String name = getIntent().getStringExtra("name");
+        String artist = getIntent().getStringExtra("artist");
+        music_name.setText(name);
+        music_singer.setText(artist);
         seekBar = (SeekBar)findViewById(R.id.seek_bar);
         setSeekBar();
 
@@ -108,6 +119,8 @@ public class SelectedMusic extends AppCompatActivity {
         nextBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(recentIndex >= MainActivity.musics.size()-1)
+                    recentIndex = -1;
                 if(MainActivity.mediaPlayer.isPlaying()){
                     MainActivity.mediaPlayer.stop();
                 }
@@ -130,28 +143,48 @@ public class SelectedMusic extends AppCompatActivity {
                 }
             }
         });
-    }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_selected_music, menu);
-        return true;
-    }
+        jump_nextBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                jumpSeekBar(jumpTime);
+            }
+        });
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+        jump_backBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                jumpSeekBar(0-jumpTime);
+            }
+        });
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        favorite_main = (ImageView)findViewById(R.id.favorite_main);
+        temp = MainActivity.musics.get(recentIndex);
+        if(temp.getmFavorite() == 1){
+            favorite_main.setBackgroundResource(R.drawable.heart);
         }
+        else
+            favorite_main.setBackgroundResource(R.drawable.blur_heart);
+        favorite_main.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int favorite = temp.getmFavorite();
+                if(favorite == 0){
+                    favorite = 1;
+                    favorite_main.setBackgroundResource(R.drawable.heart);
+                }
+                else{
+                    favorite = 0;
+                    favorite_main.setBackgroundResource(R.drawable.blur_heart);
+                }
+                MainActivity.musics.get(recentIndex).setmFavorite(favorite);
+                helper = new MusicHelper(SelectedMusic.this);
+                int success = helper.setNewFavorite(temp.getmName(),favorite);
+                if(success != 0)
+                    Toast.makeText(SelectedMusic.this, "Done", Toast.LENGTH_SHORT).show();
+            }
+        });
 
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -159,7 +192,9 @@ public class SelectedMusic extends AppCompatActivity {
         if (keyCode == KeyEvent.KEYCODE_BACK ) {
             Intent i = new Intent(SelectedMusic.this,MainActivity.class);
             i.putExtra("isPlaying",isPlaying);
-            i.putExtra("key",recentIndex);
+            i.putExtra("key", recentIndex);
+            i.putExtra("name",music_name.getText().toString());
+            i.putExtra("artist",music_singer.getText().toString());
             startActivity(i);
         }
         return super.onKeyDown(keyCode, event);
@@ -171,6 +206,13 @@ public class SelectedMusic extends AppCompatActivity {
         playBtn.setBackgroundResource(R.drawable.img_btn_pause_pressed);
         MainActivity.mediaPlayer = MediaPlayer.create(SelectedMusic.this, Uri.parse(MainActivity.musics.get(position).getmPath()));
         MainActivity.mediaPlayer.start();
+        helper = new MusicHelper(SelectedMusic.this);
+        String name = MainActivity.musics.get(position).getmName();
+        int newTurn = MainActivity.musics.get(position).getmTurn()+1;
+        helper.setNewTurn(name, newTurn);
+        helper.setNewLast(name, 0);
+        helper.setAllLast();
+        helper.CloseBD();
         setSeekBar();
         MainActivity.started = true;
         MainActivity.mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
@@ -219,5 +261,17 @@ public class SelectedMusic extends AppCompatActivity {
         );
         seekBar.setProgress((int)startTime);
         myHandler.postDelayed(UpdateSongTime,100);
+    }
+
+    private void jumpSeekBar(int jump){
+        int temp = (int)startTime;
+        int newTime = temp+jump;
+        if(newTime > 0 && newTime <= finalTime){
+            startTime += jump;
+            MainActivity.mediaPlayer.seekTo((int)startTime);
+        }
+        else{
+            Toast.makeText(SelectedMusic.this, "Cannot jump", Toast.LENGTH_SHORT).show();
+        }
     }
 }

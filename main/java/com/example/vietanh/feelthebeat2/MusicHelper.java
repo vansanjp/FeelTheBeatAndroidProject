@@ -91,13 +91,49 @@ public class MusicHelper extends SQLiteOpenHelper {
 
     public void setNewTurn(String name,int newTurn) {
         ContentValues values = new ContentValues();
-        values.put(CL_ListenTurn,2);
-        database.update(TB_NAME,values,"Name = ?",new String[]{name});
-        /*String sql = "UPDATE "+TB_NAME+" SET "+CL_ListenTurn+" = "+newTurn+" WHERE "+CL_Name+" = "+name+"";
-        database.execSQL(sql);*/
+        values.put(CL_ListenTurn,newTurn);
+        database.update(TB_NAME, values, "Name = ?", new String[]{name});
     }
 
-    public void setTurnList(List<MusicListItem> musics){
+    public int setNewFavorite(String name,int favorite){
+        ContentValues values = new ContentValues();
+        values.put(CL_Favorite, favorite);
+        return database.update(TB_NAME,values,"Name = ?",new String[]{name});
+    }
+
+    public int setNewLast(String name,int last){
+        ContentValues values = new ContentValues();
+        values.put(CL_LastListen,last);
+        return database.update(TB_NAME,values,"Name = ?",new String[]{name});
+    }
+
+    public void setAllLast(){
+        String sql = "select * from "+this.TB_NAME;
+        Cursor cursor = this.SELECTSQL(sql);
+        while (cursor.moveToNext()){
+            String tempName = cursor.getString(cursor.getColumnIndex(this.CL_Name));
+            int tempLast = cursor.getInt(cursor.getColumnIndex(this.CL_LastListen));
+            this.setNewLast(tempName,tempLast+1);
+        }
+    }
+
+    public void getLastList(List<MusicListItem> musics){
+        String sql = "SELECT * FROM "+this.TB_NAME+" WHERE "+CL_LastListen+" < 10 ORDER BY "+CL_LastListen+" ASC";
+        Cursor cursor = this.SELECTSQL(sql);
+        while (cursor.moveToNext()){
+            String tempName = cursor.getString(cursor.getColumnIndex(this.CL_Name));
+            String tempDuration = cursor.getString(cursor.getColumnIndex(this.CL_Duration));
+            String tempArtist = cursor.getString(cursor.getColumnIndex(this.CL_Artist));
+            String tempPath = cursor.getString(cursor.getColumnIndex(this.CL_Path));
+            int tempFavorite = cursor.getInt(cursor.getColumnIndex(this.CL_Favorite));
+            int tempTurn = cursor.getInt(cursor.getColumnIndex(this.CL_ListenTurn));
+            int tempLast = cursor.getInt(cursor.getColumnIndex(this.CL_LastListen));
+            MusicListItem temp = new MusicListItem(tempName,tempDuration,tempArtist,tempPath,tempFavorite,tempTurn,tempLast);
+            musics.add(temp);
+        }
+    }
+
+    public void getTurnList(List<MusicListItem> musics){
         String sql = "SELECT * FROM "+this.TB_NAME+" WHERE "+CL_ListenTurn+" > 0 ORDER BY "+CL_ListenTurn+" DESC";
         Cursor cursor = this.SELECTSQL(sql);
         while (cursor.moveToNext()){
@@ -111,5 +147,29 @@ public class MusicHelper extends SQLiteOpenHelper {
             MusicListItem temp = new MusicListItem(tempName,tempDuration,tempArtist,tempPath,tempFavorite,tempTurn,tempLast);
             musics.add(temp);
         }
+    }
+
+    public void getFavoriteList(List<MusicListItem> musics){
+        String sql = "SELECT * FROM "+this.TB_NAME+" WHERE "+CL_Favorite+" = 1";
+        Cursor cursor = this.SELECTSQL(sql);
+        while (cursor.moveToNext()){
+            String tempName = cursor.getString(cursor.getColumnIndex(this.CL_Name));
+            String tempDuration = cursor.getString(cursor.getColumnIndex(this.CL_Duration));
+            String tempArtist = cursor.getString(cursor.getColumnIndex(this.CL_Artist));
+            String tempPath = cursor.getString(cursor.getColumnIndex(this.CL_Path));
+            int tempFavorite = cursor.getInt(cursor.getColumnIndex(this.CL_Favorite));
+            int tempTurn = cursor.getInt(cursor.getColumnIndex(this.CL_ListenTurn));
+            int tempLast = cursor.getInt(cursor.getColumnIndex(this.CL_LastListen));
+            MusicListItem temp = new MusicListItem(tempName,tempDuration,tempArtist,tempPath,tempFavorite,tempTurn,tempLast);
+            musics.add(temp);
+        }
+    }
+
+    public void deleteTable(){
+        database.execSQL("DROP TABLE IF EXISTS " + TB_NAME);
+        onCreate(database);
+    }
+    public int DELETE_Song(String name) {
+        return database.delete(TB_NAME,CL_Name+" = ?",new String[]{name});
     }
 }

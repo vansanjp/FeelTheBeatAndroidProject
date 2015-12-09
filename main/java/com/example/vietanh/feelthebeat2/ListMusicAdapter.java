@@ -51,19 +51,11 @@ public class ListMusicAdapter extends ArrayAdapter {
         final String name = arrayMusics.get(position).getmName();
         final String duration = arrayMusics.get(position).getmDuration();
         final String artist = arrayMusics.get(position).getmArtist();
-//        final boolean check = arrayMusics.get(position).ismCheck();
-//
-//        if (check) {
-//            holder.check.setBackgroundResource(R.drawable.imagesbuttonpause);
-//        } else {
-//            holder.check.setBackgroundResource(R.drawable.imagesbuttonplay);
-//        }
 
         holder.name.setText(name);
         holder.duration.setText("" + StorageUtil.convertDuration(duration));
         holder.artist.setText(artist);
         holder.check.setBackgroundResource(R.drawable.double_sol);
-
 
         return convertView;
     }
